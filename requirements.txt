@@ -1,0 +1,4 @@
+Flask>==3.0.3
+graphviz>=0.20.1
+Pillow>=9.5.0
+sqlparse>=0.4.4
