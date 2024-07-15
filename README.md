@@ -32,6 +32,19 @@ pip install Pillow
 ```bash
 pip install sqlparse 
 ```
+```bash
+pip install fastapi 
+```
+```bash
+pip install uvicorn 
+```
+```bash
+pip install jinja2 
+```
+```bash
+pip install python-multipar
+```
+
 
 ## How It Works
 
