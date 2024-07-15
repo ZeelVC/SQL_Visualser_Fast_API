@@ -58,8 +58,8 @@ Python main.py
 ```bash
 /SQLViz
 ```
-For example, if your local host is running on port 5000, the full URL would be:
+For example, if your local host is running on port 8000, the full URL would be:
 ```bash
-http://localhost:5000/SQLViz
+http://localhost:8000/SQLViz
 ```
 > Note: Ensure that you're in the correct directory and that all dependencies are properly installed before running the application.
