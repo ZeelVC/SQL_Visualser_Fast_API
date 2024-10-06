@@ -172,8 +172,10 @@ AND employee_id != (SELECT todid
 #sql_input = sqlparse.format(sql_input)
 result = sql_to_dict(sql_input)
 
+'''
 # Print the resulting dictionary
 for key, value in result.items():
     print(f"Query {key}:")
     print(value)
     print()
+'''
