@@ -1,4 +1,5 @@
 import os
+import re
 import base64
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
@@ -10,51 +11,6 @@ from .SQL_parsing_module import sql_to_dict
 
 router = APIRouter()
 templates = Jinja2Templates(directory="website/templates")
-
-def enhance_image(image_path):
-    img = Image.open(image_path)
-    img = img.convert("RGBA")
-
-    enhancer = ImageEnhance.Brightness(img)
-    img = enhancer.enhance(0.5)
-    enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(1.5)
-
-    modified_image_path = "modified_" + os.path.basename(image_path)
-    img.save(modified_image_path, "PNG")
-
-    return modified_image_path
-
-def remove_background(image_path):
-    img = Image.open(image_path)
-    img = img.convert("RGBA")
-    datas = img.getdata()
-    background_color = (255, 255, 255, 255)
-    
-    new_data = []
-    for item in datas:
-        if item[:3] == background_color[:3]:
-            new_data.append((255, 255, 255, 0))
-        else:
-            new_data.append(item)
-    
-    img.putdata(new_data)
-    
-    modified_image_path = "modified_" + os.path.basename(image_path)
-    img.save(modified_image_path, "PNG")
-    
-    return modified_image_path
-
-def change_image_color(image_path, target_color):
-    img = Image.open(image_path)
-    img = img.convert("RGBA")
-    datas = img.getdata()
-    target_color = Image.new("RGBA", (1, 1), target_color).getpixel((0, 0))
-    new_data = [(target_color[0], target_color[1], target_color[2], item[3]) if item[3] != 0 else item for item in datas]
-    img.putdata(new_data)
-    modified_image_path = "colored_" + os.path.basename(image_path)
-    img.save(modified_image_path, "PNG")
-    return modified_image_path
 
 def add_cte_table(dict_of_cte_table, query, query_num):
     new_dict = dict_of_cte_table
@@ -86,31 +42,93 @@ async def sqlviz_get(request: Request):
 async def sqlviz_post(request: Request, query: str = Form(...)):
     dict_of_images = {}
     dict_of_table_created = {}
-    messages = []  # Initialize messages list
+    messages = []
 
     Query = query
+
+    # Trim whitespace from the query
+    query = query.strip()
+    
+    # Define SQL clauses to look for
+    clauses = [
+        'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 
+        'ON', 'ORDER', 'GROUP', 'HAVING', 'LIMIT', 'UNION', 'WITH'
+    ]
+    
+    # Create regex pattern
+    pattern = r'\b(' + '|'.join(clauses) + r')\b'
+    
+    # Function to replace matches with uppercase and newline
+    def replace_func(match):
+        return '\n' + match.group(0).upper()
+    
+    # Apply the regex replacement
+    query = re.sub(pattern, replace_func, query, flags=re.IGNORECASE)
+    
+    # Ensure the query ends with a semicolon
+    if not query.endswith(';'):
+        query += ';'
+
+    print("query after formatting it in auth.py file : ")
+    print(query)
     query_dict = sql_to_dict(query)
     if query_dict:
         for query_num, query in query_dict.items():
-            # Uncomment and adjust this block if you want to implement syntax checking
-            # if check_syntax(query, 0):
-            #     raise HTTPException(status_code=400, detail=f"SQL Syntax Error in Query {query_num}")
-
             dict_of_table_created = add_cte_table(dict_of_table_created, query, query_num)
 
             image_path1 = main1(query, dict_of_table_created)
             image_path2 = main2(query, dict_of_table_created)
             
             if image_path1 and os.path.exists(image_path1) and image_path2 and os.path.exists(image_path2):
-                modified_image_path1 = remove_background(image_path1)
-                modified_image_path2 = remove_background(image_path2)
+                # Process image 1
+                img1 = Image.open(image_path1)
+                img1 = img1.convert("RGBA")
+                datas1 = img1.getdata()
                 
-                modified_image_path1 = enhance_image(modified_image_path1)
-                modified_image_path2 = enhance_image(modified_image_path2)
+                # Remove background for image 1
+                new_data1 = []
+                for item in datas1:
+                    if item[:3] == (255, 255, 255):
+                        new_data1.append((255, 255, 255, 0))
+                    else:
+                        new_data1.append(item)
+                img1.putdata(new_data1)
+                
+                # Enhance image 1
+                enhancer = ImageEnhance.Brightness(img1)
+                img1 = enhancer.enhance(0.5)
+                enhancer = ImageEnhance.Contrast(img1)
+                img1 = enhancer.enhance(1.5)
+                
+                # Save modified image 1
+                modified_image_path1 = "modified_" + os.path.basename(image_path1)
+                img1.save(modified_image_path1, "PNG")
 
-                #modified_image_path1 = change_image_color(modified_image_path1, "#3266c0")
-                #modified_image_path2 = change_image_color(modified_image_path2, "#3266c0")
+                # Process image 2
+                img2 = Image.open(image_path2)
+                img2 = img2.convert("RGBA")
+                datas2 = img2.getdata()
+                
+                # Remove background for image 2
+                new_data2 = []
+                for item in datas2:
+                    if item[:3] == (255, 255, 255):
+                        new_data2.append((255, 255, 255, 0))
+                    else:
+                        new_data2.append(item)
+                img2.putdata(new_data2)
+                
+                # Enhance image 2
+                enhancer = ImageEnhance.Brightness(img2)
+                img2 = enhancer.enhance(0.5)
+                enhancer = ImageEnhance.Contrast(img2)
+                img2 = enhancer.enhance(1.5)
+                
+                # Save modified image 2
+                modified_image_path2 = "modified_" + os.path.basename(image_path2)
+                img2.save(modified_image_path2, "PNG")
 
+                # Read and encode images
                 with open(modified_image_path1, 'rb') as image_file:
                     img_data1 = base64.b64encode(image_file.read()).decode('utf-8')
                 with open(modified_image_path2, 'rb') as image_file:
@@ -127,10 +145,7 @@ async def sqlviz_post(request: Request, query: str = Form(...)):
                 os.remove(modified_image_path1)
                 os.remove(modified_image_path2)
             else:
-                # Log the error or handle it as needed
-                #print(f"Failed to generate visualization for Query {query_num}")
                 messages.append(f"Failed to generate visualization for Query {query_num}")
-
 
     print(dict_of_table_created)
 
